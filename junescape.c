@@ -6,7 +6,11 @@
 #include <unistd.h>
 #define BUFSIZE 8192
 
+#ifdef __GNUC__
+// Because why the hell not
 void err(char *errstr, char *progname) __attribute__((cold, noreturn));
+#endif
+
 void err(char *errstr, char *progname)
 {
     fprintf(stderr, "%s: %s\n", progname, errstr);
