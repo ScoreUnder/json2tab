@@ -28,14 +28,8 @@ last_person_id=
         last_person_id=$person_id
     fi
 
-    key4=${key#/*/*/*/}
-    if [ "$person_subkey" = friends ] && [ "$key4" = name ]; then
-        if [ -z "$friends" ]; then
-            friends=$value
-        else
-            friends="$friends, $value"
-        fi
-    elif [ "$person_subkey" = name ]; then
-        person_name=$value
-    fi
+    case $person_subkey in
+        friends) [ "${key#/*/*/*/}" = name ] && friends="${friends:+$friends, }$value";;
+        name) person_name=$value;;
+    esac
 done
