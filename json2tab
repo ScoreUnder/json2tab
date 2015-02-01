@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+# Converts json into tabular format
+# key <tab> type <tab> value
+#
+# Key components are separated by /, not ., to make for easier grepping.
+# All keys and values are escaped.
+# Newlines become \n, nulls become \0, slashes become \/, tabs become \t,
+# backslashes become \\. Everything else is raw.
+# There is a "junescape" utility bundled with this to undo that transformation.
+#
+# Dicts and lists don't have a direct value, but will nonetheless be given
+# a line to themselves. The value they correspond to will be the number of
+# entries within them. (TL;DR: /0/blah dict 5 → this dict has 5 items)
+
+
+import json
+import numbers
+import sys
+
+def escape(s):
+    if isinstance(s, numbers.Real):
+        # This won't have anything inside it that needs escaping
+        return str(s)
+    # This is probably pretty slow
+    return (s.replace('\\', '\\\\').replace('\n', '\\n')
+             .replace('\0', '\\0').replace('/', '\\/')
+             .replace('\t', '\\t'))
+
+
+def join_prefix(base, new):
+    return base + '/' + escape(new)
+
+
+def print_esc(prefix, typ, item):
+    print(prefix, typ, escape(item), sep='\t')
+
+
+def print_tabular(structure, prefix):
+    if isinstance(structure, bool):
+        print_esc(prefix, "bool", "true" if structure else "false")
+    elif isinstance(structure, numbers.Real):
+        print_esc(prefix, "num", structure)
+    elif isinstance(structure, str):
+        print_esc(prefix, "str", structure)
+    elif isinstance(structure, dict):
+        print_esc(prefix, "dict", len(structure))
+        for key, value in structure.items():
+            print_tabular(value, prefix=join_prefix(prefix, key))
+    elif isinstance(structure, list):
+        print_esc(prefix, "list", len(structure))
+        for key, value in enumerate(structure):
+            print_tabular(value, prefix=join_prefix(prefix, key))
+
+
+def main(args):
+    if len(args) > 1:
+        print("This doesn't take arguments", file=sys.stderr)
+        return 1
+
+    try:
+        print_tabular(json.loads(sys.stdin.read()), prefix="")
+    except (ValueError, UnicodeDecodeError) as e:
+        print(e, file=sys.stderr)
+        return 1
+    except BrokenPipeError as e:
+        return 1
+    return 0
+
+if __name__ == '__main__':
+    exit(main(sys.argv))
